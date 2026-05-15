@@ -466,7 +466,7 @@ docs(readme): adiciona instrucoes de uso local
 
 ### Husky
 
-`pre-commit` roda lint, build e testes unitários antes de aceitar o commit.
+`pre-commit` roda Prisma generate, lint, build e cobertura completa antes de aceitar o commit. O hook sobe o Postgres de teste com `docker compose -f docker-compose.test.yml up -d`, executa `npm run test:coverage` e derruba o banco ao final.
 
 ---
 

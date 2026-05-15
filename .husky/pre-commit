@@ -1,3 +1,13 @@
+npm run prisma:generate
 npm run lint
 npm run build
-npm run test:unit
+
+docker compose -f docker-compose.test.yml up -d
+
+cleanup() {
+  docker compose -f docker-compose.test.yml down
+}
+
+trap cleanup EXIT
+
+npm run test:coverage
