@@ -32,6 +32,27 @@ describe("MilitarService", () => {
     });
   });
 
+  it("retorna erro quando trigrama nao existe", async () => {
+    const service = new MilitarService({
+      findByTrigrama: vi.fn().mockResolvedValue(null),
+    } as never);
+
+    await expect(service.findByTrigrama("ABC")).rejects.toMatchObject({
+      codigo: "MILITAR_NAO_ENCONTRADO",
+      statusCode: 404,
+    });
+  });
+
+  it("retorna militar por id e por trigrama", async () => {
+    const service = new MilitarService({
+      findById: vi.fn().mockResolvedValue(militar),
+      findByTrigrama: vi.fn().mockResolvedValue(militar),
+    } as never);
+
+    await expect(service.findById(militar.id)).resolves.toMatchObject({ trigrama: "ABC" });
+    await expect(service.findByTrigrama("abc")).resolves.toMatchObject({ trigrama: "ABC" });
+  });
+
   it("traduz P2002 para TRIGRAMA_DUPLICADO", async () => {
     const service = new MilitarService({
       create: vi.fn().mockRejectedValue(
@@ -60,5 +81,44 @@ describe("MilitarService", () => {
       dados: [{ trigrama: "ABC" }],
       meta: { page: 1, limit: 20, total: 1, totalPages: 1 },
     });
+  });
+
+  it("atualiza e remove militar existente", async () => {
+    const repository = {
+      findById: vi.fn().mockResolvedValue(militar),
+      update: vi.fn().mockResolvedValue({ ...militar, nomeCompleto: "Joao Atualizado" }),
+      delete: vi.fn().mockResolvedValue(undefined),
+    };
+    const service = new MilitarService(repository as never);
+
+    await expect(service.update(militar.id, { nomeCompleto: "Joao Atualizado" })).resolves.toMatchObject({
+      nomeCompleto: "Joao Atualizado",
+    });
+    await expect(service.delete(militar.id)).resolves.toBeUndefined();
+    expect(repository.delete).toHaveBeenCalledWith(militar.id);
+  });
+
+  it("repassa erros desconhecidos do Prisma", async () => {
+    const error = new Error("falha externa");
+    const service = new MilitarService({
+      create: vi.fn().mockRejectedValue(error),
+    } as never);
+
+    await expect(
+      service.create({
+        trigrama: "ABC",
+        nomeCompleto: "Joao da Silva",
+        cpf: "12345678901",
+      }),
+    ).rejects.toBe(error);
+  });
+
+  it("normaliza erros desconhecidos nao Error", async () => {
+    const service = new MilitarService({
+      update: vi.fn().mockRejectedValue("falha"),
+      findById: vi.fn().mockResolvedValue(militar),
+    } as never);
+
+    await expect(service.update(militar.id, { nomeCompleto: "Joao" })).rejects.toThrow("Erro desconhecido");
   });
 });

@@ -9,6 +9,7 @@ export const rateLimitPlugin: FastifyPluginAsync = fp(async (app) => {
     timeWindow: env.RATE_LIMIT_WINDOW,
     errorResponseBuilder(request) {
       return {
+        statusCode: 429,
         erro: {
           codigo: "LIMITE_REQUISICOES_EXCEDIDO",
           mensagem: "Limite de requisicoes excedido",

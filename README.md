@@ -78,7 +78,7 @@ cp .env.example .env
 
 # 3. Gerar Prisma Client e aplicar migrations
 npm run prisma:generate
-npm run prisma:migrate:dev
+npm run prisma:migrate:deploy
 
 # 4. Subir a API em modo desenvolvimento
 npm run dev
@@ -116,11 +116,21 @@ Arquivos de referência: [`.env.example`](.env.example) e [`.env.test.example`](
 
 ### Desenvolvimento
 
-Use um projeto Supabase **DEV** separado de produção. Aponte `DATABASE_URL` para ele e rode:
+Use um projeto Supabase **DEV** separado de produção. Aponte `DATABASE_URL` e `DIRECT_DATABASE_URL` para ele.
+
+Para aplicar migrations já versionadas no projeto:
+
+```bash
+npm run prisma:migrate:deploy
+```
+
+Use `migrate dev` apenas depois de alterar `prisma/schema.prisma` e querer criar uma nova migration:
 
 ```bash
 npm run prisma:migrate:dev   # cria nova migration a partir do schema
 ```
+
+Se o Prisma exibir `Enter a name for the new migration`, ele está pedindo o nome de uma migration nova. Se você não alterou o schema, cancele com `Ctrl+C` e use `npm run prisma:migrate:deploy`.
 
 ### Produção / Staging
 
@@ -295,7 +305,7 @@ Ordenação padrão: `createdAt desc`.
 
 ## Testes
 
-A suíte é dividida em três níveis. Cobertura mínima exigida: **statements 80%, branches 70%, functions 90%, lines 80%**.
+A suíte é dividida em três níveis. Cobertura mínima exigida: **statements 100%, branches 100%, functions 100%, lines 100%**.
 
 ```bash
 # Apenas unitários (sem banco)
@@ -504,7 +514,7 @@ docs(readme): adiciona instrucoes de uso local
 | Husky no pre-commit              | Bloquear commit com erro                     | Validar só no CI           | Aprovado |
 | GitHub Actions                   | CI integrado ao repositório                  | CI externo                 | Aprovado |
 | DELETE físico no MVP             | Simplicidade inicial                         | Soft delete                | Temporário |
-| `functions` 90%, `branches` 70%  | TDD eleva functions; branches mantém piso da task | 80/70 ou 65 em branches | Aprovado |
+| Coverage 100%                    | Garante que todo caminho versionado tenha teste automatizado | Thresholds parciais | Aprovado |
 
 ---
 
@@ -516,6 +526,7 @@ docs(readme): adiciona instrucoes de uso local
 | `/ready` retorna 503                          | Banco indisponível ou `DATABASE_URL` incorreta                | Valide a connection string e a rede até o banco.                     |
 | Testes de integração não rodam                | Postgres de teste não está de pé                              | `docker compose -f docker-compose.test.yml up -d` e aguarde o healthcheck |
 | Testes batem em Supabase                      | `.env.test` apontando para Supabase                           | Restaure `.env.test` a partir de `.env.test.example`                 |
+| Prisma pediu `Enter a name for the new migration` | `migrate dev` foi usado sem intenção de criar migration nova | Cancele com `Ctrl+C` e rode `npm run prisma:migrate:deploy`          |
 | `prisma migrate dev` falha em Transaction Pooler | Pooler não suporta migrations                                | Use Direct Connection ou Session Pooler para migrations              |
 | `/version` mostra `commit: "local"`           | `GIT_SHA` não está setado                                     | Esperado em desenvolvimento. CI/Deploy deve passar o SHA real.       |
 | Logs aparecem com `[REDACTED]`                | Comportamento correto — campo sensível                        | Não é um problema. É a redaction protegendo dados.                   |
