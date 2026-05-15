@@ -1,0 +1,27 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_DATABASE_URL")
+}
+
+model Militar {
+  id              String   @id @default(uuid()) @db.Uuid
+  trigrama        String   @unique @db.VarChar(3)
+  nomeCompleto    String   @map("nome_completo") @db.VarChar(160)
+  nomeGuerra      String?  @map("nome_guerra") @db.VarChar(80)
+  cpf             String   @unique @db.VarChar(11)
+  saram           String?  @unique @db.VarChar(10)
+  email           String?  @unique @db.VarChar(160)
+  banco           String?  @db.VarChar(80)
+  agencia         String?  @db.VarChar(20)
+  contaCorrente   String?  @map("conta_corrente") @db.VarChar(30)
+  temDependente   Boolean  @default(false) @map("tem_dependente")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("militares")
+}

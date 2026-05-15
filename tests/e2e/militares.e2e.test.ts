@@ -1,0 +1,132 @@
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { buildApp } from "../../src/app";
+import { cleanDatabase, ensureTestDatabaseUrl, migrateTestDatabase } from "../helpers/database";
+
+describe("Militares e2e", () => {
+  const appPromise = buildApp();
+
+  beforeAll(() => {
+    ensureTestDatabaseUrl();
+    migrateTestDatabase();
+  });
+
+  afterEach(async () => {
+    await cleanDatabase();
+  });
+
+  afterAll(async () => {
+    const app = await appPromise;
+    await app.close();
+  });
+
+  it("cria e lista militares com request id", async () => {
+    const app = await appPromise;
+
+    const createResponse = await app.inject({
+      method: "POST",
+      url: "/militares",
+      headers: { "x-request-id": "req-test" },
+      payload: {
+        trigrama: "abc",
+        nomeCompleto: "Joao da Silva",
+        cpf: "12345678901",
+      },
+    });
+
+    expect(createResponse.statusCode).toBe(201);
+    expect(createResponse.headers["x-request-id"]).toBe("req-test");
+    expect(createResponse.json()).toMatchObject({ trigrama: "ABC" });
+
+    const listResponse = await app.inject({ method: "GET", url: "/militares?page=1&limit=20" });
+
+    expect(listResponse.statusCode).toBe(200);
+    expect(listResponse.json()).toMatchObject({
+      dados: [{ trigrama: "ABC" }],
+      meta: { page: 1, limit: 20, total: 1, totalPages: 1 },
+    });
+  });
+
+  it("busca, atualiza e remove militar", async () => {
+    const app = await appPromise;
+
+    const createResponse = await app.inject({
+      method: "POST",
+      url: "/militares",
+      payload: {
+        trigrama: "def",
+        nomeCompleto: "Maria da Silva",
+        cpf: "12345678902",
+        saram: "7654321",
+        email: "maria.silva@example.com",
+      },
+    });
+
+    const created = createResponse.json();
+
+    const byIdResponse = await app.inject({ method: "GET", url: `/militares/${created.id}` });
+    expect(byIdResponse.statusCode).toBe(200);
+    expect(byIdResponse.json()).toMatchObject({ trigrama: "DEF" });
+
+    const byTrigramaResponse = await app.inject({
+      method: "GET",
+      url: "/militares/trigrama/def",
+    });
+    expect(byTrigramaResponse.statusCode).toBe(200);
+    expect(byTrigramaResponse.json()).toMatchObject({ email: "maria.silva@example.com" });
+
+    const updateResponse = await app.inject({
+      method: "PATCH",
+      url: `/militares/${created.id}`,
+      payload: {
+        nomeCompleto: "Maria Silva Atualizada",
+        temDependente: true,
+      },
+    });
+    expect(updateResponse.statusCode).toBe(200);
+    expect(updateResponse.json()).toMatchObject({
+      nomeCompleto: "Maria Silva Atualizada",
+      temDependente: true,
+    });
+
+    const deleteResponse = await app.inject({
+      method: "DELETE",
+      url: `/militares/${created.id}`,
+    });
+    expect(deleteResponse.statusCode).toBe(204);
+
+    const missingResponse = await app.inject({ method: "GET", url: `/militares/${created.id}` });
+    expect(missingResponse.statusCode).toBe(404);
+    expect(missingResponse.json()).toMatchObject({
+      erro: { codigo: "MILITAR_NAO_ENCONTRADO" },
+    });
+  });
+
+  it("retorna conflito para trigrama duplicado", async () => {
+    const app = await appPromise;
+    const payload = {
+      trigrama: "ghi",
+      nomeCompleto: "Pedro da Silva",
+      cpf: "12345678903",
+    };
+
+    await app.inject({ method: "POST", url: "/militares", payload });
+    const duplicateResponse = await app.inject({
+      method: "POST",
+      url: "/militares",
+      payload: { ...payload, cpf: "12345678904" },
+    });
+
+    expect(duplicateResponse.statusCode).toBe(409);
+    expect(duplicateResponse.json()).toMatchObject({
+      erro: { codigo: "TRIGRAMA_DUPLICADO" },
+    });
+  });
+
+  it("expoe swagger json", async () => {
+    const app = await appPromise;
+    const response = await app.inject({ method: "GET", url: "/docs/json" });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().openapi).toBeDefined();
+  });
+});

@@ -1,0 +1,25 @@
+services:
+  api-controle-geral:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: ${PORT:-3000}
+      DATABASE_URL: ${DATABASE_URL}
+      DIRECT_DATABASE_URL: ${DIRECT_DATABASE_URL}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-100}
+      RATE_LIMIT_WINDOW: ${RATE_LIMIT_WINDOW:-1 minute}
+      BODY_LIMIT: ${BODY_LIMIT:-1048576}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      OTEL_ENABLED: ${OTEL_ENABLED:-false}
+      GIT_SHA: ${GIT_SHA:-local}
+      SERVICE_NAME: ${SERVICE_NAME:-controle-geral-api}
+      APP_VERSION: ${APP_VERSION:-0.1.0}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
