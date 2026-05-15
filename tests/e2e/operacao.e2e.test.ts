@@ -28,8 +28,11 @@ describe("Operacao e2e", () => {
     expect(versionResponse.json()).toMatchObject({
       servico: "controle-geral-api",
       ambiente: "test",
-      commit: "test",
     });
+    expect(versionResponse.json().versao).toEqual(expect.any(String));
+    expect(versionResponse.json().commit).toEqual(expect.any(String));
+    expect(versionResponse.json().commit).not.toHaveLength(0);
+    expect(versionResponse.json().timestamp).toEqual(expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/));
   });
 
   it("padroniza erros de validacao com requestId", async () => {
