@@ -1,235 +1,521 @@
-# controle-geral-api
+<h1 align="center">controle-geral-api</h1>
 
-API REST em TypeScript para CRUD de militares, usando Fastify, Prisma, PostgreSQL, Vitest e Docker.
+<p align="center">
+  API REST em TypeScript para o CRUD de militares — leve, validada, observável e pronta para deploy.
+</p>
 
-## 1. Visao geral
-Servico `controle-geral-api` para cadastro, consulta, atualizacao e remocao de militares.
+<p align="center">
+  <img src="https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript">
+  <img src="https://img.shields.io/badge/Node.js-22-339933?style=for-the-badge&logo=nodedotjs&logoColor=white" alt="Node.js 22">
+  <img src="https://img.shields.io/badge/Fastify-000000?style=for-the-badge&logo=fastify&logoColor=white" alt="Fastify">
+  <img src="https://img.shields.io/badge/Prisma-2D3748?style=for-the-badge&logo=prisma&logoColor=white" alt="Prisma">
+  <img src="https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL">
+  <img src="https://img.shields.io/badge/Vitest-6E9F18?style=for-the-badge&logo=vitest&logoColor=white" alt="Vitest">
+  <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker">
+  <img src="https://img.shields.io/badge/GitHub_Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white" alt="GitHub Actions">
+</p>
 
-## 2. Objetivo
-Entregar uma API simples, validada, observavel e testavel para dados de militares.
+---
 
-## 3. Escopo
-Inclui CRUD de militares, health checks, Swagger, Docker, CI e testes automatizados.
+## Sumário
 
-## 4. Fora de escopo
-Autenticacao, autorizacao, painel web e provisionamento do banco de producao.
+- [Visão geral](#visão-geral)
+- [Stack](#stack)
+- [Quick start](#quick-start)
+- [Variáveis de ambiente](#variáveis-de-ambiente)
+- [Banco de dados](#banco-de-dados)
+- [Estrutura do projeto](#estrutura-do-projeto)
+- [API reference](#api-reference)
+- [Contratos de resposta](#contratos-de-resposta)
+- [Testes](#testes)
+- [Docker](#docker)
+- [Observabilidade](#observabilidade)
+- [Segurança](#segurança)
+- [CI/CD](#cicd)
+- [Convenções](#convenções)
+- [Decisões técnicas](#decisões-técnicas)
+- [Troubleshooting](#troubleshooting)
 
-## 5. Stack
-Node.js 22, TypeScript, Fastify, Prisma, PostgreSQL, Zod, Pino e Vitest.
+---
 
-## 6. Arquitetura
-O codigo fica dividido em `config`, `infra`, `modules` e `shared`.
+## Visão geral
 
-## 7. Modulos
-O modulo principal e `militares`. O modulo `operacao` cobre `/health`, `/ready` e `/version`.
+`controle-geral-api` é um serviço HTTP para cadastrar, consultar, atualizar e remover militares. O projeto entrega CRUD validado, health checks operacionais, documentação OpenAPI gerada automaticamente, logs estruturados com redaction de dados sensíveis, e está pronto para rodar localmente, em container ou em plataformas gerenciadas.
 
-## 8. Convencoes
-Codigo, nomes de arquivo e mensagens publicas ficam sem acentos.
+**Fora de escopo neste MVP:** autenticação, autorização, painel web e provisionamento do banco de produção.
 
-## 9. Naming
-O nome do servico e sempre `controle-geral-api`.
+---
 
-## 10. Banco
-Producao usa PostgreSQL. Testes usam PostgreSQL local via Docker na porta `5433`.
+## Stack
 
-## 11. Modelo Militar
-Campos publicos usam camelCase; banco usa snake_case quando aplicavel.
+| Camada            | Tecnologia                              |
+| ----------------- | --------------------------------------- |
+| Runtime           | Node.js 22                              |
+| Linguagem         | TypeScript (modo `strict`)              |
+| Framework HTTP    | Fastify                                 |
+| ORM               | Prisma                                  |
+| Banco             | PostgreSQL (Supabase em produção)       |
+| Validação         | Zod                                     |
+| Logger            | Pino (via Fastify)                      |
+| Testes            | Vitest                                  |
+| Documentação API  | `@fastify/swagger` + `@fastify/swagger-ui` |
+| Container         | Docker (multi-stage)                    |
+| CI                | GitHub Actions                          |
 
-## 12. Booleano de dependente
-API usa `temDependente`; banco usa `tem_dependente`.
+---
 
-## 13. Variaveis de ambiente
-As 13 variaveis obrigatorias estao documentadas em `.env.example` e `.env.test.example`.
+## Quick start
 
-## 14. Instalacao
+Pré-requisitos: Node.js 22+, npm 10+, Docker (apenas para testes e produção).
+
 ```bash
+# 1. Instalar dependências
 npm install
-```
 
-## 15. Configuracao local
-Crie `.env` baseado em `.env.example`.
+# 2. Configurar ambiente
+cp .env.example .env
+# edite .env com sua DATABASE_URL
 
-## 16. Configuracao de teste
-Crie `.env.test` baseado em `.env.test.example`.
-
-## 17. Gerar Prisma Client
-```bash
+# 3. Gerar Prisma Client e aplicar migrations
 npm run prisma:generate
-```
-
-## 18. Criar migration em desenvolvimento
-```bash
 npm run prisma:migrate:dev
-```
 
-## 19. Aplicar migrations
-```bash
-npm run prisma:migrate:deploy
-```
-
-## 20. Rodar em desenvolvimento
-```bash
+# 4. Subir a API em modo desenvolvimento
 npm run dev
 ```
 
-## 21. Build
+A API sobe em `http://localhost:3000` por padrão. Swagger UI em `http://localhost:3000/docs`.
+
+---
+
+## Variáveis de ambiente
+
+Todas as 13 variáveis são validadas no boot via Zod. A aplicação falha imediatamente com mensagem clara se alguma estiver ausente ou inválida.
+
+| Variável               | Obrigatória | Descrição                                              | Exemplo                                                  |
+| ---------------------- | :---------: | ------------------------------------------------------ | -------------------------------------------------------- |
+| `DATABASE_URL`         | sim         | Connection string usada em runtime                     | `postgresql://user:pass@host:5432/db?schema=public`      |
+| `DIRECT_DATABASE_URL`  | sim         | Connection string direta, usada em migrations          | igual ou variante de `DATABASE_URL`                      |
+| `NODE_ENV`             | sim         | Ambiente de execução                                   | `development` \| `test` \| `production`                  |
+| `PORT`                 | sim         | Porta HTTP                                             | `3000`                                                   |
+| `LOG_LEVEL`            | sim         | Nível mínimo de log                                    | `debug` \| `info` \| `warn` \| `error` \| `silent`       |
+| `CORS_ORIGINS`         | sim         | Origens permitidas (lista separada por vírgula)        | `http://localhost:3000,http://localhost:5173`            |
+| `BODY_LIMIT`           | sim         | Tamanho máximo do payload                              | `1048576`                                                |
+| `RATE_LIMIT_MAX`       | sim         | Máximo de requisições por janela                       | `100`                                                    |
+| `RATE_LIMIT_WINDOW`    | sim         | Janela de rate limit                                   | `1 minute`                                               |
+| `OTEL_ENABLED`         | sim         | Habilita OpenTelemetry                                 | `false`                                                  |
+| `SERVICE_NAME`         | sim         | Nome do serviço para logs e telemetria                 | `controle-geral-api`                                     |
+| `APP_VERSION`          | sim         | Versão exibida em `/version`                           | `0.1.0`                                                  |
+| `GIT_SHA`              | sim         | Commit exibido em `/version`                           | `local` \| `${{ github.sha }}`                           |
+
+Arquivos de referência: [`.env.example`](.env.example) e [`.env.test.example`](.env.test.example). **Nunca commite `.env` ou credenciais reais.**
+
+---
+
+## Banco de dados
+
+### Desenvolvimento
+
+Use um projeto Supabase **DEV** separado de produção. Aponte `DATABASE_URL` para ele e rode:
+
 ```bash
-npm run build
+npm run prisma:migrate:dev   # cria nova migration a partir do schema
 ```
 
-## 22. Start
+### Produção / Staging
+
 ```bash
-npm run start
+npm run prisma:migrate:deploy   # aplica migrations existentes, não cria novas
 ```
 
-## 23. Lint
+> ⚠️ Migrations **não** são executadas no `Dockerfile` durante o build. Aplique-as via pipeline de deploy.
+
+### Notas sobre Supabase + Prisma
+
+| Cenário                                  | Recomendação                                                                          |
+| ---------------------------------------- | ------------------------------------------------------------------------------------- |
+| Ambiente suporta IPv6                    | Use **Direct Connection**                                                             |
+| Ambiente exige IPv4                      | Use **Supavisor Session Pooler**                                                      |
+| Precisa de Transaction Pooler com Prisma | Adicione `?pgbouncer=true` na connection string                                       |
+| Migrations                               | **Sempre** use Direct Connection ou Session Pooler — nunca Transaction Pooler         |
+
+### Testes
+
+Testes de integração e e2e usam **PostgreSQL local via Docker** na porta `5433`. Nunca apontam para Supabase.
+
 ```bash
-npm run lint
+docker compose -f docker-compose.test.yml up -d
+npm run prisma:migrate:deploy
+npm run test:integration
+npm run test:e2e
+docker compose -f docker-compose.test.yml down
 ```
 
-## 24. Formatacao
-```bash
-npm run format
-npm run format:check
+---
+
+## Estrutura do projeto
+
+```
+src/
+├── app.ts                          # compõe a instância Fastify
+├── server.ts                       # boot, listen e graceful shutdown
+├── config/
+│   └── env.ts                      # validação Zod das envs
+├── modules/
+│   ├── militares/                  # CRUD de militares
+│   │   ├── militar.routes.ts
+│   │   ├── militar.controller.ts
+│   │   ├── militar.service.ts
+│   │   ├── militar.repository.ts
+│   │   ├── militar.schemas.ts
+│   │   ├── militar.mapper.ts
+│   │   └── militar.types.ts
+│   └── operacao/
+│       └── operacao.routes.ts      # /health, /ready, /version
+├── shared/
+│   ├── errors/
+│   │   ├── AppError.ts
+│   │   └── errorHandler.ts
+│   └── http/
+│       └── pagination.ts
+└── infra/
+    ├── database/prisma.ts
+    ├── docs/swagger.ts
+    ├── http/{cors,rate-limit}.ts
+    └── observability/
+        ├── logger.ts
+        ├── request-context.ts
+        └── telemetry.ts
+
+prisma/
+├── schema.prisma
+└── migrations/
+
+tests/
+├── unit/
+├── integration/
+├── e2e/
+└── helpers/
 ```
 
-## 25. Testes unitarios
+---
+
+## API reference
+
+Documentação interativa completa em [`/docs`](http://localhost:3000/docs). Contrato OpenAPI em [`/docs/json`](http://localhost:3000/docs/json).
+
+### Operação
+
+| Método | Rota         | Descrição                                |
+| ------ | ------------ | ---------------------------------------- |
+| `GET`  | `/health`    | Liveness check (sempre 200 se vivo)      |
+| `GET`  | `/ready`     | Readiness check (valida conexão com DB)  |
+| `GET`  | `/version`   | Versão, ambiente e commit do serviço     |
+
+### Militares
+
+| Método   | Rota                              | Descrição                              |
+| -------- | --------------------------------- | -------------------------------------- |
+| `POST`   | `/militares`                      | Cria militar                           |
+| `GET`    | `/militares`                      | Lista paginada com busca opcional      |
+| `GET`    | `/militares/:id`                  | Busca por UUID                         |
+| `GET`    | `/militares/trigrama/:trigrama`   | Busca por trigrama                     |
+| `PATCH`  | `/militares/:id`                  | Atualização parcial                    |
+| `DELETE` | `/militares/:id`                  | Remoção                                |
+
+#### Paginação
+
+Query params em `GET /militares`:
+
+| Param    | Default | Máximo | Descrição                                                              |
+| -------- | :-----: | :----: | ---------------------------------------------------------------------- |
+| `page`   |   `1`   |   —    | Número da página                                                       |
+| `limit`  |  `20`   | `100`  | Itens por página                                                       |
+| `search` |   —     |   —    | Busca por trigrama, nome completo, nome de guerra, SARAM, CPF ou email |
+
+Ordenação padrão: `createdAt desc`.
+
+#### Modelo Militar
+
+| Campo (API)     | Tipo      | Obrigatório | Regra                                              |
+| --------------- | --------- | :---------: | -------------------------------------------------- |
+| `id`            | `uuid`    | gerado      | —                                                  |
+| `trigrama`      | `string`  | **sim**     | Exatamente 3 caracteres, salvo em UPPERCASE, único |
+| `nomeCompleto`  | `string`  | **sim**     | Máximo 160 caracteres                             |
+| `nomeGuerra`    | `string`  | não         | —                                                  |
+| `saram`         | `string`  | não         | Máximo 10 caracteres                               |
+| `cpf`           | `string`  | **sim**     | Exatamente 11 dígitos, único                       |
+| `email`         | `string`  | não         | Formato válido quando informado                    |
+| `banco`         | `string`  | não         | —                                                  |
+| `agencia`       | `string`  | não         | —                                                  |
+| `contaCorrente` | `string`  | não         | —                                                  |
+| `temDependente` | `boolean` | não         | Default `false`                                    |
+| `createdAt`     | `string`  | gerado      | ISO 8601                                           |
+| `updatedAt`     | `string`  | gerado      | ISO 8601                                           |
+
+---
+
+## Contratos de resposta
+
+### Sucesso paginado
+
+```json
+{
+  "dados": [],
+  "meta": { "page": 1, "limit": 20, "total": 0, "totalPages": 0 }
+}
+```
+
+### Erro padronizado
+
+```json
+{
+  "erro": {
+    "codigo": "ERRO_VALIDACAO",
+    "mensagem": "payload invalido",
+    "detalhes": [],
+    "requestId": "01HXYZ..."
+  }
+}
+```
+
+### Códigos de erro
+
+| HTTP | Código                          | Quando ocorre                              |
+| :--: | ------------------------------- | ------------------------------------------ |
+| 400  | `ERRO_VALIDACAO`                | Payload, params ou query inválidos         |
+| 400  | `JSON_INVALIDO`                 | Body com JSON malformado                   |
+| 404  | `MILITAR_NAO_ENCONTRADO`        | Recurso não existe                         |
+| 409  | `TRIGRAMA_DUPLICADO`            | Trigrama já cadastrado                     |
+| 413  | `PAYLOAD_MUITO_GRANDE`          | Body acima de `BODY_LIMIT`                 |
+| 429  | `LIMITE_REQUISICOES_EXCEDIDO`   | Rate limit estourado                       |
+| 500  | `ERRO_INTERNO`                  | Erro não previsto (sem vazar stack)        |
+
+---
+
+## Testes
+
+A suíte é dividida em três níveis. Cobertura mínima exigida: **statements 80%, branches 70%, functions 90%, lines 80%**.
+
 ```bash
+# Apenas unitários (sem banco)
 npm run test:unit
-```
 
-## 26. Testes de integracao
-```bash
+# Integração (precisa do Postgres de teste rodando)
 docker compose -f docker-compose.test.yml up -d
 npm run test:integration
-```
 
-## 27. Testes e2e
-```bash
-docker compose -f docker-compose.test.yml up -d
+# End-to-end (sobe Fastify via app.inject, precisa do Postgres de teste)
 npm run test:e2e
-```
 
-## 28. Cobertura
-```bash
+# Tudo + cobertura
 npm run test:coverage
+docker compose -f docker-compose.test.yml down
 ```
 
-## 29. Todos os testes
+> Os testes **nunca** apontam para Supabase. `DATABASE_URL` em ambiente de teste vem de `.env.test` e aponta para `localhost:5433`.
+
+---
+
+## Docker
+
+### Imagem de produção
+
+Multi-stage build com Node LTS Alpine, instalação apenas de dependências de produção na imagem final e usuário não-root. Migrations **não** rodam no build.
+
 ```bash
-npm run test
+docker build -t controle-geral-api .
+docker run -p 3000:3000 --env-file .env controle-geral-api
 ```
 
-## 30. Docker de teste
-```bash
-docker compose -f docker-compose.test.yml up -d
-```
+### Compose para VPS (apenas API)
 
-## 31. Docker de producao
 ```bash
 docker compose up -d --build
+docker compose down
 ```
 
-## 32. Health
-`GET /health` retorna estado basico do servico.
+O `docker-compose.yml` versionado **não** contém Postgres — o banco principal é Supabase. O compose só aceita variáveis de ambiente.
 
-## 33. Readiness
-`GET /ready` valida conectividade com o banco.
+### Compose para testes (apenas Postgres)
 
-## 34. Version
-`GET /version` retorna versao, ambiente, commit e timestamp.
+```bash
+docker compose -f docker-compose.test.yml up -d
+docker compose -f docker-compose.test.yml down -v
+```
 
-## 35. Swagger UI
-`GET /docs` abre a interface Swagger.
+---
 
-## 36. OpenAPI JSON
-`GET /docs/json` retorna o contrato OpenAPI.
+## Observabilidade
 
-## 37. Criar militar
-`POST /militares` cria um registro.
+### Request ID
 
-## 38. Listar militares
-`GET /militares?page=1&limit=20&search=abc` lista com paginacao.
+Toda requisição recebe um `requestId`:
 
-## 39. Buscar por id
-`GET /militares/:id` busca por UUID.
+- Se o cliente envia `x-request-id`, o valor é preservado.
+- Caso contrário, a API gera um UUID.
+- O valor é retornado no header `x-request-id` da resposta.
+- Em respostas de erro, o valor aparece em `erro.requestId`.
 
-## 40. Buscar por trigrama
-`GET /militares/trigrama/:trigrama` busca por trigrama.
+Use o `requestId` para correlacionar logs e respostas durante debugging.
 
-## 41. Atualizar militar
-`PATCH /militares/:id` atualiza parcialmente.
+### Logs estruturados
 
-## 42. Remover militar
-`DELETE /militares/:id` remove um registro.
+Logs em JSON via Pino. Cada entrada inclui `requestId`, método, rota, status, tempo de resposta e ambiente. Os campos sensíveis são automaticamente substituídos por `"[REDACTED]"`:
 
-## 43. Paginacao
-Respostas paginadas usam `{ dados, meta: { page, limit, total, totalPages } }`.
+```
+req.headers.authorization
+req.headers.cookie
+req.body.cpf
+req.body.email
+req.body.banco
+req.body.agencia
+req.body.contaCorrente
+res.headers.set-cookie
+DATABASE_URL
+DIRECT_DATABASE_URL
+```
 
-## 44. Erros
-Erros usam `{ erro: { codigo, mensagem, detalhes, requestId } }`.
+### Prisma logs por ambiente
 
-## 45. Request id
-O header `x-request-id` e reutilizado quando enviado; caso contrario, a API gera um UUID.
+| Ambiente      | Níveis           |
+| ------------- | ---------------- |
+| `development` | `warn`, `error`  |
+| `test`        | `error`          |
+| `production`  | `error`          |
 
-## 46. Logger
-Pino faz redaction de campos sensiveis como CPF, email, banco, agencia, conta e credenciais.
+Queries SQL completas nunca são logadas em produção.
 
-## 47. CORS
-`CORS_ORIGINS` define origens permitidas. Wildcard e recusado em producao.
+### OpenTelemetry
 
-## 48. Rate limit
-`RATE_LIMIT_MAX` e `RATE_LIMIT_WINDOW` controlam limites de requisicao.
+Preparado, mas **desabilitado por padrão** (`OTEL_ENABLED=false`). Quando habilitado, inicializa instrumentação para traces HTTP, Fastify e Prisma sem exigir collector externo no MVP.
 
-## 49. Body limit
-`BODY_LIMIT` define o tamanho maximo do payload.
+---
 
-## 50. Telemetria
-`OTEL_ENABLED=false` desabilita inicializacao de telemetria por padrao.
+## Segurança
 
-## 51. CI
-O workflow roda install, Prisma, migrations, lint, testes, cobertura e build.
+- **CORS** controlado por `CORS_ORIGINS`. Wildcard `*` é recusado em produção.
+- **Rate limit** configurável via `RATE_LIMIT_MAX` e `RATE_LIMIT_WINDOW`. Excesso retorna 429 com código `LIMITE_REQUISICOES_EXCEDIDO`.
+- **Body limit** configurável via `BODY_LIMIT`. Default sugerido: 1 MiB.
+- **Redaction automática** nos logs.
+- **Validação estrita** de variáveis de ambiente no boot.
+- **Erros internos nunca vazam** stack trace, SQL, connection string ou variáveis de ambiente para o cliente.
+- **Autenticação não está implementada neste MVP** — exposição pública em produção exige camada adicional.
 
-## 52. Deploy
-O `Dockerfile` nao executa migrations no build. Aplique migrations fora da imagem.
+---
 
-## 53. Seguranca
-Nao commite `.env`, credenciais reais ou URLs privadas.
+## CI/CD
 
-## 54. Troubleshooting
-Se os testes de banco falharem, confirme se o Postgres de teste esta saudavel e se `.env.test` aponta para porta `5433`.
+Pipeline em [`.github/workflows/ci.yml`](.github/workflows/ci.yml) executa em cada push e PR:
 
-## Decisoes tecnicas
+1. Checkout e setup Node 22
+2. `npm ci`
+3. Sobe service container PostgreSQL para testes
+4. `prisma generate` e `prisma migrate deploy`
+5. `npm run lint`
+6. `npm run test:unit`
+7. `npm run test:integration`
+8. `npm run test:e2e`
+9. `npm run test:coverage` (com thresholds)
+10. `npm run build`
 
-| Decisao | Motivo | Impacto | Alternativas | Status |
-| --- | --- | --- | --- | --- |
-| Fastify | Alto desempenho e plugins maduros | Baixa latencia | Express, Hono | Aceita |
-| TypeScript strict | Reduz erros em runtime | Mais rigor no desenvolvimento | JavaScript | Aceita |
-| Prisma | ORM tipado e migrations claras | Camada de dados previsivel | Knex, Drizzle | Aceita |
-| PostgreSQL | Banco relacional robusto | Suporte a constraints | MySQL, SQLite | Aceita |
-| Zod | Validacao explicita | Contratos legiveis | Ajv puro, Yup | Aceita |
-| Pino | Logger rapido | Logs estruturados | Winston | Aceita |
-| Redaction | Protege dados sensiveis | Menos risco de vazamento | Redaction manual | Aceita |
-| Request id | Rastreabilidade | Debug mais simples | Trace externo apenas | Aceita |
-| Swagger | Documentacao navegavel | Facilita consumo | Redoc | Aceita |
-| Docker multi-stage | Imagem menor | Build mais previsivel | Imagem unica | Aceita |
-| Docker sem migrations | Evita mutacao no build | Deploy mais seguro | Rodar migration no build | Aceita |
-| Vitest | Testes rapidos | Feedback curto | Jest | Aceita |
-| App inject | E2E sem porta real | Teste HTTP simples | Supertest | Aceita |
-| Docker Compose test | Banco real local | Integracao confiavel | Banco em memoria | Aceita |
-| CI unico | Fluxo simples | Menor complexidade | Jobs separados | Aceita |
-| Sem Supabase no CI | Evita secrets em teste | Testes reproduziveis | Banco remoto | Aceita |
-| camelCase na API | Convencao TS | Contrato amigavel | snake_case publico | Aceita |
-| snake_case no DB | Convencao SQL | Consistencia relacional | camelCase no DB | Aceita |
-| `temDependente` | Nome explicito | Evita ambiguidades | `dependente` | Aceita |
-| `AppError` | Erros padronizados | Menos ifs em controllers | Erros soltos | Aceita |
-| Error handler global | Contrato unico | Cliente previsivel | Tratamento por rota | Aceita |
-| Paginacao default | Protege banco | Menos respostas grandes | Sem limite | Aceita |
-| Limite max 100 | Evita abuso | Carga controlada | Limite maior | Aceita |
-| UUID | IDs nao sequenciais | Menos exposicao | Inteiro serial | Aceita |
-| Unique trigrama | Regra de negocio | Evita duplicidade | Validacao sem constraint | Aceita |
-| Health sem banco | Liveness simples | Nao depende de DB | Health com query | Aceita |
-| Ready com banco | Sinal real de prontidao | Detecta indisponibilidade | Ready estatico | Aceita |
-| Env validation | Falha cedo | Boot mais seguro | Defaults silenciosos | Aceita |
-| Husky pre-commit | Feedback antes do commit | Menos regressao | Apenas CI | Aceita |
-| Conventional commits | Historico legivel | Releases mais simples | Mensagens livres | Aceita |
+O CI **nunca** referencia Supabase. Todos os testes rodam contra Postgres em service container.
+
+### Deploy
+
+| Plataforma  | Mecanismo                                                                   |
+| ----------- | --------------------------------------------------------------------------- |
+| Render      | Runtime Node ou Dockerfile, `DATABASE_URL` setada em Environment            |
+| Northflank  | Buildpack ou Dockerfile, variáveis em Secret Group                          |
+| VPS         | `docker compose up -d --build` com `.env` no host                           |
+
+### Graceful shutdown
+
+A API trata `SIGTERM` e `SIGINT`: para de aceitar conexões, aguarda requisições em andamento, fecha o Fastify, desconecta o Prisma e encerra o processo. Compatível com containers e plataformas gerenciadas.
+
+---
+
+## Convenções
+
+### Código
+
+- Português **sem** acentos ou cedilha em código, nomes de arquivo, mensagens públicas, commits e scripts.
+- README e comentários **podem** usar acentos.
+- API em `camelCase`, banco em `snake_case`, mapeamento via `@map` no Prisma.
+
+### Booleanos
+
+| Tipo de booleano             | Prefixo | Exemplo          |
+| ---------------------------- | ------- | ---------------- |
+| Estado                       | `eh`    | `ehAtivo`        |
+| Posse, permissão ou relação  | `tem`   | `temDependente`  |
+
+> Nunca usar `is`, `has` ou nomes sem prefixo (`dependente`).
+
+### Commits
+
+[Conventional Commits](https://www.conventionalcommits.org/) em português sem acentos:
+
+```
+feat(militares): cria crud inicial de militares
+test(militares): adiciona testes de criacao e duplicidade
+fix(militares): corrige validacao de trigrama
+ci(pipeline): adiciona validacao de lint testes e build
+docs(readme): adiciona instrucoes de uso local
+```
+
+### Husky
+
+`pre-commit` roda lint, build e testes unitários antes de aceitar o commit.
+
+---
+
+## Decisões técnicas
+
+| Decisão                          | Motivo                                       | Alternativas               | Status   |
+| -------------------------------- | -------------------------------------------- | -------------------------- | -------- |
+| Node.js + TypeScript             | Produtividade e tipagem estática             | JavaScript, Python, Go     | Aprovado |
+| Fastify                          | Performance e plugins maduros                | Express, NestJS, Hono      | Aprovado |
+| Prisma                           | Type safety e migrations claras              | Drizzle, TypeORM, Knex     | Aprovado |
+| Supabase PostgreSQL              | Postgres gerenciado, bom custo-benefício     | RDS, Neon, Postgres em VPS | Aprovado |
+| Supabase DEV separado de PROD    | Evitar testes contaminando dados reais       | Um único projeto Supabase  | Aprovado |
+| Postgres local apenas em testes  | Reprodutibilidade e isolamento               | Testar no Supabase DEV     | Aprovado |
+| API local fora do Docker         | Produtividade e debug                        | Tudo containerizado        | Aprovado |
+| Projeto container-ready          | Portabilidade entre Render, Northflank e VPS | Apenas runtime Node        | Aprovado |
+| Migrations fora do Dockerfile    | Build determinístico                         | Migrar no build            | Aprovado |
+| `prisma migrate dev` em DEV      | Versionar evolução do schema                 | `db push`                  | Aprovado |
+| `prisma migrate deploy` em PROD  | Aplicar migrations sem criar novas           | `migrate dev` em PROD      | Aprovado |
+| camelCase na API, snake_case DB  | Convenções nativas de cada camada            | Mesmo padrão em ambos      | Aprovado |
+| `@map` no Prisma                 | Preservar convenções distintas               | Nomes iguais nas duas pontas | Aprovado |
+| `temDependente`                  | Padrão do projeto para posse/relação         | `isDependent`, `dependente` | Aprovado |
+| Pino com Fastify                 | Logs estruturados em JSON                    | Winston, `console.log`     | Aprovado |
+| `requestId` em toda requisição   | Rastreabilidade ponta a ponta                | Sem correlação             | Aprovado |
+| Redaction automática             | Proteção contra vazamento em logs            | Disciplina manual          | Aprovado |
+| `/health`, `/ready`, `/version`  | Compatibilidade com plataformas e monitoria  | Apenas `/health`           | Aprovado |
+| Graceful shutdown                | Encerramento seguro em containers            | Encerramento padrão        | Aprovado |
+| Prisma log por ambiente          | Evitar SQL e dados sensíveis em produção     | Logar queries sempre       | Aprovado |
+| OpenTelemetry preparado, off     | Caminho pronto sem complexidade no MVP       | Não preparar telemetria    | Aprovado |
+| CORS por env, sem wildcard       | Segurança em APIs expostas                   | CORS aberto                | Aprovado |
+| Body limit configurável          | Evitar payloads excessivos                   | Limite padrão sem controle | Aprovado |
+| Rate limit configurável          | Proteção contra abuso                        | Sem rate limit             | Aprovado |
+| Sem autenticação no MVP          | Foco no CRUD base                            | JWT/API key agora          | Temporário |
+| Swagger desde o início           | Contrato visível e testável                  | README manual              | Aprovado |
+| Vitest                           | Velocidade e integração com TypeScript       | Jest                       | Aprovado |
+| Husky no pre-commit              | Bloquear commit com erro                     | Validar só no CI           | Aprovado |
+| GitHub Actions                   | CI integrado ao repositório                  | CI externo                 | Aprovado |
+| DELETE físico no MVP             | Simplicidade inicial                         | Soft delete                | Temporário |
+| `functions` 90%, `branches` 70%  | TDD eleva functions; branches mantém piso da task | 80/70 ou 65 em branches | Aprovado |
+
+---
+
+## Troubleshooting
+
+| Sintoma                                       | Causa provável                                                | Solução                                                              |
+| --------------------------------------------- | ------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `npm run dev` falha no boot                   | Variável de ambiente ausente ou inválida                      | Confira `.env` contra `.env.example`. A mensagem indica qual variável. |
+| `/ready` retorna 503                          | Banco indisponível ou `DATABASE_URL` incorreta                | Valide a connection string e a rede até o banco.                     |
+| Testes de integração não rodam                | Postgres de teste não está de pé                              | `docker compose -f docker-compose.test.yml up -d` e aguarde o healthcheck |
+| Testes batem em Supabase                      | `.env.test` apontando para Supabase                           | Restaure `.env.test` a partir de `.env.test.example`                 |
+| `prisma migrate dev` falha em Transaction Pooler | Pooler não suporta migrations                                | Use Direct Connection ou Session Pooler para migrations              |
+| `/version` mostra `commit: "local"`           | `GIT_SHA` não está setado                                     | Esperado em desenvolvimento. CI/Deploy deve passar o SHA real.       |
+| Logs aparecem com `[REDACTED]`                | Comportamento correto — campo sensível                        | Não é um problema. É a redaction protegendo dados.                   |
