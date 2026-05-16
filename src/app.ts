@@ -9,6 +9,7 @@ import { logger } from "./infra/observability/logger";
 import { requestContextPlugin } from "./infra/observability/request-context";
 import { militarRoutes } from "./modules/militares/militar.routes";
 import { operacaoRoutes } from "./modules/operacao/operacao.routes";
+import { pstGraduacaoRoutes } from "./modules/pst-graduacoes/pst-graduacao.routes";
 import { errorHandler } from "./shared/errors/errorHandler";
 
 export async function buildApp() {
@@ -32,6 +33,7 @@ export async function buildApp() {
   app.setErrorHandler(errorHandler);
 
   await app.register(operacaoRoutes);
+  await app.register(pstGraduacaoRoutes);
   await app.register(militarRoutes);
 
   app.addHook("onClose", async () => {

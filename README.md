@@ -245,6 +245,15 @@ Query params em `GET /militares`:
 
 Ordenação padrão: `createdAt desc`.
 
+### Postos e graduacoes
+
+| Metodo | Rota                     | Descricao                                      |
+| ------ | ------------------------ | ---------------------------------------------- |
+| `GET`  | `/pst-graduacoes`        | Lista postos e graduacoes em ordem hierarquica |
+| `GET`  | `/pst-graduacoes/:ordem` | Busca posto ou graduacao pela ordem            |
+
+Os dados de `pst_graduacao` sao cadastrados exclusivamente por migration. A API nao expoe rotas de criacao, atualizacao ou remocao para essa tabela.
+
 #### Modelo Militar
 
 | Campo (API)     | Tipo      | Obrigatório | Regra                                              |

@@ -25,3 +25,11 @@ model Militar {
 
   @@map("militares")
 }
+
+model PstGraduacao {
+  ordem     Int    @id @db.SmallInt
+  abreviacao String @db.VarChar(20)
+  nome      String @db.VarChar(80)
+
+  @@map("pst_graduacao")
+}
