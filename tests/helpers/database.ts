@@ -16,5 +16,6 @@ export function migrateTestDatabase() {
 }
 
 export async function cleanDatabase() {
+  await prisma.promocao.deleteMany();
   await prisma.militar.deleteMany();
 }

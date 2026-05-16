@@ -22,14 +22,31 @@ model Militar {
   temDependente   Boolean  @default(false) @map("tem_dependente")
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
+  promocoes       Promocao[]
 
   @@map("militares")
 }
 
 model PstGraduacao {
-  ordem     Int    @id @db.SmallInt
-  abreviacao String @db.VarChar(20)
-  nome      String @db.VarChar(80)
+  ordem      Int        @id @db.SmallInt
+  abreviacao String     @db.VarChar(20)
+  nome       String     @db.VarChar(80)
+  promocoes  Promocao[]
 
   @@map("pst_graduacao")
+}
+
+model Promocao {
+  id                 String       @id @default(uuid()) @db.Uuid
+  militarId          String       @map("militar_id") @db.Uuid
+  pstGraduacaoOrdem  Int          @map("pst_graduacao_ordem") @db.SmallInt
+  dataPromocao       DateTime     @map("data_promocao") @db.Date
+  createdAt          DateTime     @default(now()) @map("created_at")
+  militar            Militar      @relation(fields: [militarId], references: [id], onDelete: Cascade)
+  pstGraduacao       PstGraduacao @relation(fields: [pstGraduacaoOrdem], references: [ordem], onDelete: Restrict)
+
+  @@unique([militarId, dataPromocao])
+  @@index([militarId, dataPromocao(sort: Desc)])
+  @@index([pstGraduacaoOrdem])
+  @@map("promocao")
 }
