@@ -145,7 +145,7 @@ INSERT INTO "adicional_militar" ("pst_graduacao_ordem", "percentual", "vigencia_
   (8, 19.00, '2020-01-01 00:00:00-03:00', 'Tabela inicial de adicional militar'),
   (9, 19.00, '2020-01-01 00:00:00-03:00', 'Tabela inicial de adicional militar'),
   (10, 19.00, '2020-01-01 00:00:00-03:00', 'Tabela inicial de adicional militar'),
-  (11, 19.00, '2020-01-01 00:00:00-03:00', 'Tabela inicial de adicional militar'),
+  (11, 16.00, '2020-01-01 00:00:00-03:00', 'Tabela inicial de adicional militar'),
   (12, 16.00, '2020-01-01 00:00:00-03:00', 'Tabela inicial de adicional militar'),
   (13, 16.00, '2020-01-01 00:00:00-03:00', 'Tabela inicial de adicional militar'),
   (14, 16.00, '2020-01-01 00:00:00-03:00', 'Tabela inicial de adicional militar'),

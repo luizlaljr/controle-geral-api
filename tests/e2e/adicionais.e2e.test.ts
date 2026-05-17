@@ -31,6 +31,10 @@ describe("Adicionais e2e", () => {
     const app = await appPromise;
 
     const militar = await app.inject({ method: "GET", url: "/adicionais/militar?data=2020-02-01&ordem=1" });
+    const militarSuboficial = await app.inject({
+      method: "GET",
+      url: "/adicionais/militar?data=2020-02-01&ordem=11",
+    });
     const disponibilidade = await app.inject({
       method: "GET",
       url: "/adicionais/disponibilidade-militar?data=2020-02-01&ordem=1",
@@ -42,6 +46,8 @@ describe("Adicionais e2e", () => {
 
     expect(militar.statusCode).toBe(200);
     expect(militar.json()).toEqual([expect.objectContaining({ pstGraduacaoOrdem: 1, percentual: 28 })]);
+    expect(militarSuboficial.statusCode).toBe(200);
+    expect(militarSuboficial.json()).toEqual([expect.objectContaining({ pstGraduacaoOrdem: 11, percentual: 16 })]);
     expect(disponibilidade.json()).toEqual([expect.objectContaining({ pstGraduacaoOrdem: 1, percentual: 41 })]);
     expect(tempoServico.json()).toEqual([expect.objectContaining({ percentual: 5 })]);
     expect(promocao.json()).toEqual([expect.objectContaining({ percentual: 5 })]);
