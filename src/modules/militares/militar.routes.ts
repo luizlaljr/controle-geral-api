@@ -130,6 +130,7 @@ export const militarRoutes: FastifyPluginAsync = async (app) => {
   app.post(
     "/militares",
     {
+      attachValidation: true,
       schema: {
         tags: ["Militares"],
         summary: "Cria militar",
@@ -220,6 +221,7 @@ export const militarRoutes: FastifyPluginAsync = async (app) => {
   app.patch(
     "/militares/:id",
     {
+      attachValidation: true,
       schema: {
         tags: ["Militares"],
         summary: "Atualiza militar",

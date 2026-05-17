@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { buildApp } from "../../src/app";
 import { prisma } from "../../src/infra/database/prisma";
 import { cleanDatabase, ensureTestDatabaseUrl, migrateTestDatabase } from "../helpers/database";
@@ -9,6 +9,10 @@ describe("Militares e2e", () => {
   beforeAll(() => {
     ensureTestDatabaseUrl();
     migrateTestDatabase();
+  });
+
+  beforeEach(async () => {
+    await cleanDatabase();
   });
 
   afterEach(async () => {
@@ -120,6 +124,90 @@ describe("Militares e2e", () => {
     expect(duplicateResponse.statusCode).toBe(409);
     expect(duplicateResponse.json()).toMatchObject({
       erro: { codigo: "TRIGRAMA_DUPLICADO" },
+    });
+  });
+
+  it("detalha campos invalidos no cadastro", async () => {
+    const app = await appPromise;
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/militares",
+      payload: {
+        trigrama: "ab",
+        nomeCompleto: "",
+        cpf: "123",
+        email: "email-invalido",
+        temDependente: "sim",
+        tipoHabilitacaoId: "uuid-invalido",
+        adicionalCompensacaoOrganicaPercentual: 21,
+        adicionalCompensacaoOrganicaPstGraduacaoBaseOrdem: "alta",
+      },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({
+      erro: {
+        codigo: "ERRO_VALIDACAO",
+        detalhes: expect.arrayContaining([
+          expect.objectContaining({ campo: "trigrama", recebido: "ab", esperado: expect.any(String) }),
+          expect.objectContaining({ campo: "nomeCompleto", recebido: "", esperado: expect.any(String) }),
+          expect.objectContaining({ campo: "cpf", recebido: "123", esperado: expect.any(String) }),
+          expect.objectContaining({ campo: "email", recebido: "email-invalido", esperado: expect.any(String) }),
+          expect.objectContaining({ campo: "temDependente", recebido: "sim", esperado: expect.any(String) }),
+          expect.objectContaining({
+            campo: "tipoHabilitacaoId",
+            recebido: "uuid-invalido",
+            esperado: expect.any(String),
+          }),
+          expect.objectContaining({
+            campo: "adicionalCompensacaoOrganicaPercentual",
+            recebido: 21,
+            esperado: expect.any(String),
+          }),
+          expect.objectContaining({
+            campo: "adicionalCompensacaoOrganicaPstGraduacaoBaseOrdem",
+            recebido: "alta",
+            esperado: expect.any(String),
+          }),
+        ]),
+      },
+    });
+  });
+
+  it("detalha referencias invalidas no cadastro", async () => {
+    const app = await appPromise;
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/militares",
+      payload: {
+        trigrama: "ref",
+        nomeCompleto: "Referencia Invalida",
+        cpf: "12345678906",
+        tipoHabilitacaoId: "8d0b9f3d-c4fb-4af0-94d9-dc54957ee1f2",
+        adicionalCompensacaoOrganicaPercentual: 10,
+        adicionalCompensacaoOrganicaPstGraduacaoBaseOrdem: 99,
+      },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({
+      erro: {
+        codigo: "REFERENCIA_INVALIDA",
+        detalhes: expect.arrayContaining([
+          expect.objectContaining({
+            campo: "tipoHabilitacaoId",
+            recebido: "8d0b9f3d-c4fb-4af0-94d9-dc54957ee1f2",
+            esperado: "id de tipo de habilitacao existente",
+          }),
+          expect.objectContaining({
+            campo: "adicionalCompensacaoOrganicaPstGraduacaoBaseOrdem",
+            recebido: 99,
+            esperado: "ordem de posto ou graduacao existente",
+          }),
+        ]),
+      },
     });
   });
 

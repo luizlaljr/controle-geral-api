@@ -2,7 +2,6 @@ import { Prisma } from "@prisma/client";
 import { describe, expect, it, vi } from "vitest";
 import { MilitarService } from "../../../src/modules/militares/militar.service";
 import type { Militar } from "../../../src/modules/militares/militar.types";
-import { AppError } from "../../../src/shared/errors/AppError";
 
 const militar: Militar = {
   id: "8d0b9f3d-c4fb-4af0-94d9-dc54957ee1f2",
@@ -135,6 +134,7 @@ describe("MilitarService", () => {
         new Prisma.PrismaClientKnownRequestError("Unique constraint", {
           code: "P2002",
           clientVersion: "test",
+          meta: { target: ["trigrama"] },
         }),
       ),
     } as never);
@@ -145,7 +145,104 @@ describe("MilitarService", () => {
         nomeCompleto: "Joao da Silva",
         cpf: "12345678901",
       }),
-    ).rejects.toBeInstanceOf(AppError);
+    ).rejects.toMatchObject({
+      codigo: "TRIGRAMA_DUPLICADO",
+      detalhes: [{ campo: "trigrama", recebido: "ABC", esperado: "valor unico" }],
+    });
+  });
+
+  it("traduz P2002 de outros campos unicos para VALOR_DUPLICADO", async () => {
+    const service = new MilitarService({
+      create: vi.fn().mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError("Unique constraint", {
+          code: "P2002",
+          clientVersion: "test",
+          meta: { target: ["cpf"] },
+        }),
+      ),
+    } as never);
+
+    await expect(
+      service.create({
+        trigrama: "ABC",
+        nomeCompleto: "Joao da Silva",
+        cpf: "12345678901",
+      }),
+    ).rejects.toMatchObject({
+      codigo: "VALOR_DUPLICADO",
+      detalhes: [{ campo: "cpf", recebido: "12345678901", esperado: "valor unico" }],
+    });
+  });
+
+  it("traduz P2002 sem metadados usando trigrama como fallback", async () => {
+    const service = new MilitarService({
+      create: vi.fn().mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError("Unique constraint", {
+          code: "P2002",
+          clientVersion: "test",
+        }),
+      ),
+    } as never);
+
+    await expect(
+      service.create({
+        trigrama: "ABC",
+        nomeCompleto: "Joao da Silva",
+        cpf: "12345678901",
+      }),
+    ).rejects.toMatchObject({
+      codigo: "TRIGRAMA_DUPLICADO",
+      detalhes: [{ campo: "trigrama", recebido: "ABC", esperado: "valor unico" }],
+    });
+  });
+
+  it("traduz P2002 de campo ausente no payload", async () => {
+    const service = new MilitarService({
+      create: vi.fn().mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError("Unique constraint", {
+          code: "P2002",
+          clientVersion: "test",
+          meta: { target: ["email"] },
+        }),
+      ),
+    } as never);
+
+    await expect(
+      service.create({
+        trigrama: "ABC",
+        nomeCompleto: "Joao da Silva",
+        cpf: "12345678901",
+      }),
+    ).rejects.toMatchObject({
+      codigo: "VALOR_DUPLICADO",
+      detalhes: [{ campo: "email", esperado: "valor unico" }],
+    });
+  });
+
+  it("recusa referencias inexistentes no cadastro", async () => {
+    const service = new MilitarService({
+      tipoHabilitacaoExists: vi.fn().mockResolvedValue(false),
+      pstGraduacaoExists: vi.fn().mockResolvedValue(false),
+      create: vi.fn(),
+    } as never);
+
+    await expect(
+      service.create({
+        trigrama: "ABC",
+        nomeCompleto: "Joao da Silva",
+        cpf: "12345678901",
+        tipoHabilitacaoId: "8d0b9f3d-c4fb-4af0-94d9-dc54957ee1f2",
+        adicionalCompensacaoOrganicaPercentual: 10,
+        adicionalCompensacaoOrganicaPstGraduacaoBaseOrdem: 99,
+      }),
+    ).rejects.toMatchObject({
+      codigo: "REFERENCIA_INVALIDA",
+      statusCode: 400,
+      detalhes: [
+        { campo: "tipoHabilitacaoId", recebido: "8d0b9f3d-c4fb-4af0-94d9-dc54957ee1f2" },
+        { campo: "adicionalCompensacaoOrganicaPstGraduacaoBaseOrdem", recebido: 99 },
+      ],
+    });
   });
 
   it("pagina resultado no formato esperado", async () => {

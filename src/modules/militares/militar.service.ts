@@ -1,5 +1,5 @@
 import { Prisma } from "@prisma/client";
-import { AppError } from "../../shared/errors/AppError";
+import { AppError, type AppErrorDetail } from "../../shared/errors/AppError";
 import { paginate } from "../../shared/http/pagination";
 import { toPublic } from "./militar.mapper";
 import { MilitarRepository, type MilitarSearchParams } from "./militar.repository";
@@ -17,11 +17,12 @@ export class MilitarService {
 
   async create(input: MilitarCreateInput): Promise<MilitarPublic> {
     this.validateCompensacaoOrganica(input);
+    await this.validateReferences(input);
 
     try {
       return toPublic(await this.repository.create(input));
     } catch (error) {
-      throw this.translatePrismaError(error);
+      throw this.translatePrismaError(error, input);
     }
   }
 
@@ -156,11 +157,12 @@ export class MilitarService {
         current.adicionalCompensacaoOrganicaPstGraduacaoBaseOrdem ??
         undefined,
     });
+    await this.validateReferences(input);
 
     try {
       return toPublic(await this.repository.update(id, input));
     } catch (error) {
-      throw this.translatePrismaError(error);
+      throw this.translatePrismaError(error, input);
     }
   }
 
@@ -169,12 +171,23 @@ export class MilitarService {
     await this.repository.delete(id);
   }
 
-  private translatePrismaError(error: unknown): Error {
+  private translatePrismaError(error: unknown, input?: MilitarCreateInput | MilitarUpdateInput): Error {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      const campo = Array.isArray(error.meta?.target) ? String(error.meta.target[0]) : "trigrama";
+      const isTrigrama = campo === "trigrama";
+
       return new AppError({
-        codigo: "TRIGRAMA_DUPLICADO",
-        mensagem: "Trigrama duplicado",
+        codigo: isTrigrama ? "TRIGRAMA_DUPLICADO" : "VALOR_DUPLICADO",
+        mensagem: isTrigrama ? "Trigrama duplicado" : "Valor duplicado",
         statusCode: 409,
+        detalhes: [
+          {
+            campo,
+            mensagem: `${campo} ja cadastrado`,
+            recebido: input && campo in input ? input[campo as keyof typeof input] : undefined,
+            esperado: "valor unico",
+          },
+        ],
       });
     }
 
@@ -192,6 +205,51 @@ export class MilitarService {
         codigo: "COMPENSACAO_ORGANICA_INVALIDA",
         mensagem: "Base da compensacao organica obrigatoria quando percentual for maior que zero",
         statusCode: 400,
+        detalhes: [
+          {
+            campo: "adicionalCompensacaoOrganicaPstGraduacaoBaseOrdem",
+            mensagem: "Base da compensacao organica obrigatoria quando percentual for maior que zero",
+            recebido: "ausente",
+            esperado: "ordem de posto ou graduacao existente",
+          },
+        ],
+      });
+    }
+  }
+
+  private async validateReferences(input: {
+    tipoHabilitacaoId?: string | undefined;
+    adicionalCompensacaoOrganicaPstGraduacaoBaseOrdem?: number | undefined;
+  }): Promise<void> {
+    const detalhes: AppErrorDetail[] = [];
+
+    if (input.tipoHabilitacaoId && !(await this.repository.tipoHabilitacaoExists(input.tipoHabilitacaoId))) {
+      detalhes.push({
+        campo: "tipoHabilitacaoId",
+        mensagem: "Tipo de habilitacao nao encontrado",
+        recebido: input.tipoHabilitacaoId,
+        esperado: "id de tipo de habilitacao existente",
+      });
+    }
+
+    if (
+      input.adicionalCompensacaoOrganicaPstGraduacaoBaseOrdem !== undefined &&
+      !(await this.repository.pstGraduacaoExists(input.adicionalCompensacaoOrganicaPstGraduacaoBaseOrdem))
+    ) {
+      detalhes.push({
+        campo: "adicionalCompensacaoOrganicaPstGraduacaoBaseOrdem",
+        mensagem: "Posto ou graduacao base da compensacao organica nao encontrado",
+        recebido: input.adicionalCompensacaoOrganicaPstGraduacaoBaseOrdem,
+        esperado: "ordem de posto ou graduacao existente",
+      });
+    }
+
+    if (detalhes.length > 0) {
+      throw new AppError({
+        codigo: "REFERENCIA_INVALIDA",
+        mensagem: "Referencia invalida",
+        statusCode: 400,
+        detalhes,
       });
     }
   }

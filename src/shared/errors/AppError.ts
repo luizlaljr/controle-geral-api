@@ -1,6 +1,8 @@
 export type AppErrorDetail = {
   campo?: string;
   mensagem: string;
+  recebido?: unknown;
+  esperado?: string;
 };
 
 export class AppError extends Error {

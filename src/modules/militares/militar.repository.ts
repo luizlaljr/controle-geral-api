@@ -54,6 +54,16 @@ export class MilitarRepository {
     return militar ? toDomain(militar) : null;
   }
 
+  async tipoHabilitacaoExists(id: string): Promise<boolean> {
+    const total = await prisma.tipoHabilitacao.count({ where: { id } });
+    return total > 0;
+  }
+
+  async pstGraduacaoExists(ordem: number): Promise<boolean> {
+    const total = await prisma.pstGraduacao.count({ where: { ordem } });
+    return total > 0;
+  }
+
   async update(id: string, input: MilitarUpdateInput): Promise<Militar> {
     const militar = await prisma.militar.update({
       where: { id },
