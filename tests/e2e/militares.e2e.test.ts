@@ -146,13 +146,15 @@ describe("Militares e2e", () => {
     });
     const militar = createResponse.json();
 
-    await prisma.promocao.create({
-      data: {
-        militarId: militar.id,
-        pstGraduacaoOrdem: 7,
-        dataPromocao: new Date("2026-01-01T03:00:00.000Z"),
+    const promocaoResponse = await app.inject({
+      method: "POST",
+      url: `/militares/${militar.id}/promocoes`,
+      payload: {
+        pst_graduacao_ordem: 7,
+        data_promocao: "2026-01-01",
       },
     });
+    expect(promocaoResponse.statusCode).toBe(201);
 
     const response = await app.inject({
       method: "GET",

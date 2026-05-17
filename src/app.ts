@@ -10,6 +10,7 @@ import { requestContextPlugin } from "./infra/observability/request-context";
 import { adicionalRoutes } from "./modules/adicionais/adicional.routes";
 import { militarRoutes } from "./modules/militares/militar.routes";
 import { operacaoRoutes } from "./modules/operacao/operacao.routes";
+import { promocaoRoutes } from "./modules/promocoes/promocao.routes";
 import { pstGraduacaoRoutes } from "./modules/pst-graduacoes/pst-graduacao.routes";
 import { soldoRoutes } from "./modules/soldos/soldo.routes";
 import { errorHandler } from "./shared/errors/errorHandler";
@@ -37,6 +38,7 @@ export async function buildApp() {
   await app.register(operacaoRoutes);
   await app.register(adicionalRoutes);
   await app.register(pstGraduacaoRoutes);
+  await app.register(promocaoRoutes);
   await app.register(soldoRoutes);
   await app.register(militarRoutes);
 
