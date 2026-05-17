@@ -4,6 +4,7 @@ import { join } from "node:path";
 
 const localDatabaseUrl = "postgresql://postgres:postgres@localhost:5433/controle_geral_api_test?schema=public";
 const isWindows = process.platform === "win32";
+const dockerComposeFile = "docker-compose.test.yml";
 
 const env = {
   ...process.env,
@@ -24,7 +25,7 @@ function run(command, args) {
     const child = spawn(command, args, {
       env,
       stdio: "inherit",
-      shell: false,
+      shell: isWindows,
       windowsHide: true,
     });
 
@@ -41,5 +42,10 @@ function run(command, args) {
 }
 
 console.log("Using local DATABASE_URL at localhost:5433 for dev:local.");
-await run(bin("prisma"), ["migrate", "dev"]);
-await run(bin("tsx"), ["watch", "src/server.ts"]);
+await run("docker", ["compose", "-f", dockerComposeFile, "up", "-d"]);
+await run(bin("prisma"), ["generate"]);
+await run(bin("prisma"), ["migrate", "deploy"]);
+
+if (process.env.DEV_LOCAL_SKIP_SERVER !== "1") {
+  await run(bin("tsx"), ["watch", "src/server.ts"]);
+}
