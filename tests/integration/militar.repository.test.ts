@@ -60,4 +60,11 @@ describe("MilitarRepository", () => {
     await expect(repository.findById(created.id)).resolves.toBeNull();
     await expect(repository.findByTrigrama("xyz")).resolves.toBeNull();
   });
+
+  it("retorna nulo quando nao ha remuneracao vigente na data", async () => {
+    const dataAnterior = new Date("2019-01-01T03:00:00.000Z");
+
+    await expect(repository.findSoldoVigente(7, dataAnterior)).resolves.toBeNull();
+    await expect(repository.findAdicionalMilitarVigente(7, dataAnterior)).resolves.toBeNull();
+  });
 });

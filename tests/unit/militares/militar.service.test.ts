@@ -16,9 +16,85 @@ const militar: Militar = {
   agencia: null,
   contaCorrente: null,
   temDependente: false,
+  tipoHabilitacaoId: null,
+  adicionalCompensacaoOrganicaPercentual: 0,
+  adicionalCompensacaoOrganicaPstGraduacaoBaseOrdem: null,
+  temAdicionalTempoServico: false,
+  temAdicionalPromocao: false,
+  temAdicionalComando: false,
   createdAt: new Date("2026-01-01T00:00:00.000Z"),
   updatedAt: new Date("2026-01-01T00:00:00.000Z"),
 };
+
+const militarComAdicionais: Militar = {
+  ...militar,
+  tipoHabilitacaoId: "8fd9d75a-6935-4bde-ad80-358ba623b8c8",
+  adicionalCompensacaoOrganicaPercentual: 10,
+  adicionalCompensacaoOrganicaPstGraduacaoBaseOrdem: 11,
+  temAdicionalTempoServico: true,
+  temAdicionalPromocao: true,
+  temAdicionalComando: true,
+};
+
+const dataReferencia = new Date("2026-02-01T03:00:00.000Z");
+
+const pstGraduacao = {
+  ordem: 7,
+  abreviacao: "Cap",
+  nome: "Capitao",
+};
+
+function createRemuneracaoRepository() {
+  return {
+    findById: vi.fn().mockResolvedValue(militarComAdicionais),
+    findPromocaoVigente: vi.fn().mockResolvedValue({
+      id: "5c470df4-90c0-4c17-8d86-bc1a31921601",
+      militarId: militar.id,
+      pstGraduacaoOrdem: 7,
+      dataPromocao: new Date("2026-01-01T03:00:00.000Z"),
+      pstGraduacao,
+    }),
+    findSoldoVigente: vi.fn().mockImplementation((ordem: number) =>
+      Promise.resolve(
+        ordem === 11
+          ? {
+              valor: 6737,
+              vigenciaInicio: new Date("2026-01-01T03:00:00.000Z"),
+              pstGraduacao: { ordem: 11, abreviacao: "SO", nome: "Suboficial" },
+            }
+          : {
+              valor: 9976,
+              vigenciaInicio: new Date("2026-01-01T03:00:00.000Z"),
+              pstGraduacao,
+            },
+      ),
+    ),
+    findAdicionalMilitarVigente: vi.fn().mockResolvedValue({
+      percentual: 19,
+      vigenciaInicio: new Date("2020-01-01T03:00:00.000Z"),
+    }),
+    findDisponibilidadeMilitarVigente: vi.fn().mockResolvedValue({
+      percentual: 12,
+      vigenciaInicio: new Date("2020-01-01T03:00:00.000Z"),
+    }),
+    findHabilitacaoVigente: vi.fn().mockResolvedValue({
+      percentual: 12,
+      vigenciaInicio: new Date("2020-01-01T03:00:00.000Z"),
+    }),
+    findTempoServicoVigente: vi.fn().mockResolvedValue({
+      percentual: 5,
+      vigenciaInicio: new Date("2020-01-01T03:00:00.000Z"),
+    }),
+    findAdicionalPromocaoVigente: vi.fn().mockResolvedValue({
+      percentual: 5,
+      vigenciaInicio: new Date("2020-01-01T03:00:00.000Z"),
+    }),
+    findComandoVigente: vi.fn().mockResolvedValue({
+      percentual: 10,
+      vigenciaInicio: new Date("2020-01-01T03:00:00.000Z"),
+    }),
+  };
+}
 
 describe("MilitarService", () => {
   it("retorna erro quando militar nao existe", async () => {
@@ -120,5 +196,102 @@ describe("MilitarService", () => {
     } as never);
 
     await expect(service.update(militar.id, { nomeCompleto: "Joao" })).rejects.toThrow("Erro desconhecido");
+  });
+
+  it("recusa compensacao organica sem base", async () => {
+    const service = new MilitarService({
+      create: vi.fn(),
+    } as never);
+
+    await expect(
+      service.create({
+        trigrama: "ABC",
+        nomeCompleto: "Joao da Silva",
+        cpf: "12345678901",
+        adicionalCompensacaoOrganicaPercentual: 10,
+      }),
+    ).rejects.toMatchObject({
+      codigo: "COMPENSACAO_ORGANICA_INVALIDA",
+      statusCode: 400,
+    });
+  });
+
+  it("calcula remuneracao vigente por data", async () => {
+    const service = new MilitarService(createRemuneracaoRepository() as never);
+
+    await expect(service.getRemuneracao(militar.id, dataReferencia)).resolves.toMatchObject({
+      militar: { id: militar.id, trigrama: "ABC" },
+      pstGraduacao,
+      soldo: { valor: 9976 },
+      adicionais: {
+        militar: { percentual: 19, valor: 1895.44 },
+        disponibilidadeMilitar: { percentual: 12, valor: 1197.12 },
+        habilitacao: { percentual: 12, valor: 1197.12 },
+        tempoServico: { percentual: 5, valor: 498.8 },
+        promocao: { percentual: 5, valor: 498.8 },
+        comando: { percentual: 10, valor: 997.6 },
+        compensacaoOrganica: { percentual: 10, valor: 673.7, baseSoldo: 6737 },
+      },
+      totalBruto: 16934.58,
+    });
+  });
+
+  it("calcula remuneracao sem adicionais opcionais", async () => {
+    const repository = {
+      ...createRemuneracaoRepository(),
+      findById: vi.fn().mockResolvedValue(militar),
+      findSoldoVigente: vi.fn().mockResolvedValue({
+        valor: 9976,
+        vigenciaInicio: new Date("2026-01-01T03:00:00.000Z"),
+        pstGraduacao,
+      }),
+    };
+    const service = new MilitarService(repository as never);
+
+    const result = await service.getRemuneracao(militar.id, dataReferencia);
+
+    expect(result.adicionais).toMatchObject({
+      habilitacao: null,
+      tempoServico: null,
+      promocao: null,
+      comando: null,
+      compensacaoOrganica: null,
+    });
+    expect(repository.findHabilitacaoVigente).not.toHaveBeenCalled();
+    expect(repository.findTempoServicoVigente).not.toHaveBeenCalled();
+  });
+
+  it("retorna erro quando nao encontra dados vigentes da remuneracao", async () => {
+    const serviceSemPromocao = new MilitarService({
+      ...createRemuneracaoRepository(),
+      findPromocaoVigente: vi.fn().mockResolvedValue(null),
+    } as never);
+    await expect(serviceSemPromocao.getRemuneracao(militar.id, dataReferencia)).rejects.toMatchObject({
+      codigo: "PROMOCAO_VIGENTE_NAO_ENCONTRADA",
+      statusCode: 404,
+    });
+
+    const serviceSemSoldo = new MilitarService({
+      ...createRemuneracaoRepository(),
+      findSoldoVigente: vi.fn().mockResolvedValue(null),
+    } as never);
+    await expect(serviceSemSoldo.getRemuneracao(militar.id, dataReferencia)).rejects.toMatchObject({
+      codigo: "SOLDO_VIGENTE_NAO_ENCONTRADO",
+      statusCode: 404,
+    });
+
+    const serviceSemAdicional = new MilitarService({
+      ...createRemuneracaoRepository(),
+      findSoldoVigente: vi.fn().mockResolvedValue({
+        valor: 9976,
+        vigenciaInicio: new Date("2026-01-01T03:00:00.000Z"),
+        pstGraduacao,
+      }),
+      findAdicionalMilitarVigente: vi.fn().mockResolvedValue(null),
+    } as never);
+    await expect(serviceSemAdicional.getRemuneracao(militar.id, dataReferencia)).rejects.toMatchObject({
+      codigo: "ADICIONAL_MILITAR_VIGENTE_NAO_ENCONTRADO",
+      statusCode: 404,
+    });
   });
 });

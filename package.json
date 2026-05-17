@@ -24,7 +24,7 @@
 
     "postinstall": "prisma generate",
     "setup:local": "npm install && npm run prisma:migrate:dev",
-    "dev:local": "npm run prisma:migrate:dev && npm run dev",
+    "dev:local": "node scripts/dev-local.mjs",
     "deploy:migrate": "npm run prisma:migrate:deploy",
 
     "prepare": "husky"

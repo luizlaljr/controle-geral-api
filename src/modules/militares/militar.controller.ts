@@ -4,6 +4,7 @@ import {
   idParamsSchema,
   militarCreateSchema,
   militarListQuerySchema,
+  militarRemuneracaoQuerySchema,
   militarUpdateSchema,
   trigramaParamsSchema,
 } from "./militar.schemas";
@@ -30,6 +31,12 @@ export class MilitarController {
   findByTrigrama = async (request: FastifyRequest) => {
     const params = trigramaParamsSchema.parse(request.params);
     return this.service.findByTrigrama(params.trigrama);
+  };
+
+  getRemuneracao = async (request: FastifyRequest) => {
+    const params = idParamsSchema.parse(request.params);
+    const query = militarRemuneracaoQuerySchema.parse(request.query);
+    return this.service.getRemuneracao(params.id, query.data);
   };
 
   update = async (request: FastifyRequest) => {

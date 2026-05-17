@@ -13,6 +13,12 @@ const militarProperties = {
   agencia: { type: "string", nullable: true, example: "0001" },
   contaCorrente: { type: "string", nullable: true, example: "12345-6" },
   temDependente: { type: "boolean", example: false },
+  tipoHabilitacaoId: { type: "string", format: "uuid", nullable: true },
+  adicionalCompensacaoOrganicaPercentual: { type: "number", example: 0 },
+  adicionalCompensacaoOrganicaPstGraduacaoBaseOrdem: { type: "integer", nullable: true },
+  temAdicionalTempoServico: { type: "boolean", example: false },
+  temAdicionalPromocao: { type: "boolean", example: false },
+  temAdicionalComando: { type: "boolean", example: false },
   createdAt: { type: "string", format: "date-time" },
   updatedAt: { type: "string", format: "date-time" },
 };
@@ -20,6 +26,69 @@ const militarProperties = {
 const militarResponse = {
   type: "object",
   properties: militarProperties,
+};
+
+const remuneracaoAdicionalResponse = {
+  type: "object",
+  properties: {
+    percentual: { type: "number", example: 19 },
+    valor: { type: "number", example: 1895.44 },
+    vigenciaInicio: { type: "string", format: "date-time" },
+  },
+};
+
+const remuneracaoPstGraduacaoResponse = {
+  type: "object",
+  properties: {
+    ordem: { type: "integer", example: 7 },
+    abreviacao: { type: "string", example: "Cap" },
+    nome: { type: "string", example: "Capitao" },
+  },
+};
+
+const remuneracaoResponse = {
+  type: "object",
+  properties: {
+    militar: {
+      type: "object",
+      properties: {
+        id: militarProperties.id,
+        trigrama: militarProperties.trigrama,
+        nomeCompleto: militarProperties.nomeCompleto,
+        nomeGuerra: militarProperties.nomeGuerra,
+      },
+    },
+    data: { type: "string", format: "date-time" },
+    pstGraduacao: remuneracaoPstGraduacaoResponse,
+    soldo: {
+      type: "object",
+      properties: {
+        valor: { type: "number", example: 9976 },
+        vigenciaInicio: { type: "string", format: "date-time" },
+      },
+    },
+    adicionais: {
+      type: "object",
+      properties: {
+        militar: remuneracaoAdicionalResponse,
+        disponibilidadeMilitar: remuneracaoAdicionalResponse,
+        habilitacao: { ...remuneracaoAdicionalResponse, nullable: true },
+        tempoServico: { ...remuneracaoAdicionalResponse, nullable: true },
+        promocao: { ...remuneracaoAdicionalResponse, nullable: true },
+        comando: { ...remuneracaoAdicionalResponse, nullable: true },
+        compensacaoOrganica: {
+          type: "object",
+          nullable: true,
+          properties: {
+            ...remuneracaoAdicionalResponse.properties,
+            baseSoldo: { type: "number", example: 6737 },
+            basePstGraduacao: remuneracaoPstGraduacaoResponse,
+          },
+        },
+      },
+    },
+    totalBruto: { type: "number", example: 16934.58 },
+  },
 };
 
 const militarBody = {
@@ -36,6 +105,13 @@ const militarBody = {
     agencia: militarProperties.agencia,
     contaCorrente: militarProperties.contaCorrente,
     temDependente: militarProperties.temDependente,
+    tipoHabilitacaoId: militarProperties.tipoHabilitacaoId,
+    adicionalCompensacaoOrganicaPercentual: militarProperties.adicionalCompensacaoOrganicaPercentual,
+    adicionalCompensacaoOrganicaPstGraduacaoBaseOrdem:
+      militarProperties.adicionalCompensacaoOrganicaPstGraduacaoBaseOrdem,
+    temAdicionalTempoServico: militarProperties.temAdicionalTempoServico,
+    temAdicionalPromocao: militarProperties.temAdicionalPromocao,
+    temAdicionalComando: militarProperties.temAdicionalComando,
   },
   example: {
     trigrama: "abc",
@@ -99,6 +175,29 @@ export const militarRoutes: FastifyPluginAsync = async (app) => {
       },
     },
     controller.findById,
+  );
+
+  app.get(
+    "/militares/:id/remuneracao",
+    {
+      schema: {
+        tags: ["Militares"],
+        summary: "Calcula remuneracao do militar",
+        params: {
+          type: "object",
+          required: ["id"],
+          properties: { id: { type: "string", format: "uuid" } },
+        },
+        querystring: {
+          type: "object",
+          properties: {
+            data: { type: "string", example: "2026-02-01" },
+          },
+        },
+        response: { 200: remuneracaoResponse },
+      },
+    },
+    controller.getRemuneracao,
   );
 
   app.get(

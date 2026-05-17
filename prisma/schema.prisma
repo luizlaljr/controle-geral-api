@@ -9,20 +9,28 @@ datasource db {
 }
 
 model Militar {
-  id              String   @id @default(uuid()) @db.Uuid
-  trigrama        String   @unique @db.VarChar(3)
-  nomeCompleto    String   @map("nome_completo") @db.VarChar(160)
-  nomeGuerra      String?  @map("nome_guerra") @db.VarChar(80)
-  cpf             String   @unique @db.VarChar(11)
-  saram           String?  @unique @db.VarChar(10)
-  email           String?  @unique @db.VarChar(160)
-  banco           String?  @db.VarChar(80)
-  agencia         String?  @db.VarChar(20)
-  contaCorrente   String?  @map("conta_corrente") @db.VarChar(30)
-  temDependente   Boolean  @default(false) @map("tem_dependente")
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
-  promocoes       Promocao[]
+  id                                                      String            @id @default(uuid()) @db.Uuid
+  trigrama                                                String            @unique @db.VarChar(3)
+  nomeCompleto                                            String            @map("nome_completo") @db.VarChar(160)
+  nomeGuerra                                              String?           @map("nome_guerra") @db.VarChar(80)
+  cpf                                                     String            @unique @db.VarChar(11)
+  saram                                                   String?           @unique @db.VarChar(10)
+  email                                                   String?           @unique @db.VarChar(160)
+  banco                                                   String?           @db.VarChar(80)
+  agencia                                                 String?           @db.VarChar(20)
+  contaCorrente                                           String?           @map("conta_corrente") @db.VarChar(30)
+  temDependente                                           Boolean           @default(false) @map("tem_dependente")
+  tipoHabilitacaoId                                       String?           @map("tipo_habilitacao_id") @db.Uuid
+  adicionalCompensacaoOrganicaPercentual                  Decimal           @default(0) @map("adicional_compensacao_organica_percentual") @db.Decimal(5, 2)
+  adicionalCompensacaoOrganicaPstGraduacaoBaseOrdem       Int?              @map("adicional_compensacao_organica_pst_graduacao_base_ordem") @db.SmallInt
+  temAdicionalTempoServico                                Boolean           @default(false) @map("tem_adicional_tempo_de_servico")
+  temAdicionalPromocao                                    Boolean           @default(false) @map("tem_adicional_promocao")
+  temAdicionalComando                                     Boolean           @default(false) @map("tem_adicional_de_comando")
+  createdAt                                               DateTime          @default(now()) @map("created_at")
+  updatedAt                                               DateTime          @updatedAt @map("updated_at")
+  promocoes                                               Promocao[]
+  tipoHabilitacao                                         TipoHabilitacao?  @relation(fields: [tipoHabilitacaoId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  adicionalCompensacaoOrganicaPstGraduacaoBase            PstGraduacao?     @relation("MilitarCompensacaoOrganicaBase", fields: [adicionalCompensacaoOrganicaPstGraduacaoBaseOrdem], references: [ordem], onDelete: Restrict, onUpdate: Cascade)
 
   @@map("militares")
 }
@@ -32,6 +40,10 @@ model PstGraduacao {
   abreviacao String     @db.VarChar(20)
   nome       String     @db.VarChar(80)
   promocoes  Promocao[]
+  soldos     Soldo[]
+  adicionaisMilitares AdicionalMilitar[]
+  adicionaisDisponibilidadeMilitar AdicionalDisponibilidadeMilitar[]
+  militaresCompensacaoOrganicaBase Militar[] @relation("MilitarCompensacaoOrganicaBase")
 
   @@map("pst_graduacao")
 }
@@ -49,4 +61,109 @@ model Promocao {
   @@index([militarId, dataPromocao(sort: Desc)])
   @@index([pstGraduacaoOrdem])
   @@map("promocao")
+}
+
+model Soldo {
+  id                String       @id @default(uuid()) @db.Uuid
+  pstGraduacaoOrdem Int          @map("pst_graduacao_ordem") @db.SmallInt
+  valor             Decimal      @db.Decimal(10, 2)
+  vigenciaInicio    DateTime     @map("vigencia_inicio") @db.Timestamptz(0)
+  observacao        String?      @db.VarChar(200)
+  createdAt         DateTime     @default(now()) @map("created_at") @db.Timestamptz(0)
+  pstGraduacao      PstGraduacao @relation(fields: [pstGraduacaoOrdem], references: [ordem], onDelete: Restrict, onUpdate: Cascade)
+
+  @@unique([pstGraduacaoOrdem, vigenciaInicio], map: "soldo_ordem_vigencia_key")
+  @@index([pstGraduacaoOrdem, vigenciaInicio], map: "soldo_ordem_vigencia_idx")
+  @@index([vigenciaInicio], map: "soldo_vigencia_idx")
+  @@map("soldo")
+}
+
+model AdicionalMilitar {
+  id                String       @id @default(uuid()) @db.Uuid
+  pstGraduacaoOrdem Int          @map("pst_graduacao_ordem") @db.SmallInt
+  percentual        Decimal      @db.Decimal(5, 2)
+  vigenciaInicio    DateTime     @map("vigencia_inicio") @db.Timestamptz(0)
+  observacao        String?      @db.VarChar(200)
+  createdAt         DateTime     @default(now()) @map("created_at") @db.Timestamptz(0)
+  pstGraduacao      PstGraduacao @relation(fields: [pstGraduacaoOrdem], references: [ordem], onDelete: Restrict, onUpdate: Cascade)
+
+  @@unique([pstGraduacaoOrdem, vigenciaInicio], map: "adicional_militar_ordem_vigencia_key")
+  @@index([pstGraduacaoOrdem, vigenciaInicio], map: "adicional_militar_ordem_vigencia_idx")
+  @@index([vigenciaInicio], map: "adicional_militar_vigencia_idx")
+  @@map("adicional_militar")
+}
+
+model AdicionalDisponibilidadeMilitar {
+  id                String       @id @default(uuid()) @db.Uuid
+  pstGraduacaoOrdem Int          @map("pst_graduacao_ordem") @db.SmallInt
+  percentual        Decimal      @db.Decimal(5, 2)
+  vigenciaInicio    DateTime     @map("vigencia_inicio") @db.Timestamptz(0)
+  observacao        String?      @db.VarChar(200)
+  createdAt         DateTime     @default(now()) @map("created_at") @db.Timestamptz(0)
+  pstGraduacao      PstGraduacao @relation(fields: [pstGraduacaoOrdem], references: [ordem], onDelete: Restrict, onUpdate: Cascade)
+
+  @@unique([pstGraduacaoOrdem, vigenciaInicio], map: "adicional_disp_ordem_vigencia_key")
+  @@index([pstGraduacaoOrdem, vigenciaInicio], map: "adicional_disp_ordem_vigencia_idx")
+  @@index([vigenciaInicio], map: "adicional_disp_vigencia_idx")
+  @@map("adicional_disponibilidade_militar")
+}
+
+model TipoHabilitacao {
+  id String @id @default(uuid()) @db.Uuid
+  codigo String @unique @db.VarChar(80)
+  nome String @unique @db.VarChar(120)
+  ativo Boolean @default(true)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(0)
+  adicionaisHabilitacao AdicionalHabilitacao[]
+  militares Militar[]
+
+  @@map("tipo_habilitacao")
+}
+
+model AdicionalHabilitacao {
+  id String @id @default(uuid()) @db.Uuid
+  tipoHabilitacaoId String @map("tipo_habilitacao_id") @db.Uuid
+  percentual Decimal @db.Decimal(5, 2)
+  vigenciaInicio DateTime @map("vigencia_inicio") @db.Timestamptz(0)
+  observacao String? @db.VarChar(200)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(0)
+  tipoHabilitacao TipoHabilitacao @relation(fields: [tipoHabilitacaoId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@unique([tipoHabilitacaoId, vigenciaInicio], map: "adicional_hab_tipo_vigencia_key")
+  @@index([tipoHabilitacaoId, vigenciaInicio], map: "adicional_hab_tipo_vigencia_idx")
+  @@index([vigenciaInicio], map: "adicional_hab_vigencia_idx")
+  @@map("adicional_habilitacao")
+}
+
+model AdicionalTempoServico {
+  id String @id @default(uuid()) @db.Uuid
+  percentual Decimal @db.Decimal(5, 2)
+  vigenciaInicio DateTime @unique @map("vigencia_inicio") @db.Timestamptz(0)
+  observacao String? @db.VarChar(200)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(0)
+
+  @@index([vigenciaInicio], map: "adicional_tempo_vigencia_idx")
+  @@map("adicional_tempo_servico")
+}
+
+model AdicionalPromocao {
+  id String @id @default(uuid()) @db.Uuid
+  percentual Decimal @db.Decimal(5, 2)
+  vigenciaInicio DateTime @unique @map("vigencia_inicio") @db.Timestamptz(0)
+  observacao String? @db.VarChar(200)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(0)
+
+  @@index([vigenciaInicio], map: "adicional_promocao_vigencia_idx")
+  @@map("adicional_promocao")
+}
+
+model AdicionalComando {
+  id String @id @default(uuid()) @db.Uuid
+  percentual Decimal @db.Decimal(5, 2)
+  vigenciaInicio DateTime @unique @map("vigencia_inicio") @db.Timestamptz(0)
+  observacao String? @db.VarChar(200)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(0)
+
+  @@index([vigenciaInicio], map: "adicional_comando_vigencia_idx")
+  @@map("adicional_comando")
 }

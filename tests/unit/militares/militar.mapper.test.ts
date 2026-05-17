@@ -1,5 +1,15 @@
+import { Prisma } from "@prisma/client";
 import { describe, expect, it } from "vitest";
 import { createInputToPrisma, toDomain, toPublic, updateInputToPrisma } from "../../../src/modules/militares/militar.mapper";
+
+const militarBase = {
+  tipoHabilitacaoId: null,
+  adicionalCompensacaoOrganicaPercentual: 0,
+  adicionalCompensacaoOrganicaPstGraduacaoBaseOrdem: null,
+  temAdicionalTempoServico: false,
+  temAdicionalPromocao: false,
+  temAdicionalComando: false,
+};
 
 describe("militar.mapper", () => {
   it("converte input camelCase para campos Prisma e uppercase", () => {
@@ -15,7 +25,13 @@ describe("militar.mapper", () => {
         agencia: "0001",
         contaCorrente: "123-4",
         temDependente: true,
-      }),
+        tipoHabilitacaoId: "8d0b9f3d-c4fb-4af0-94d9-dc54957ee1f2",
+        adicionalCompensacaoOrganicaPercentual: 10,
+      adicionalCompensacaoOrganicaPstGraduacaoBaseOrdem: 7,
+      temAdicionalTempoServico: true,
+      temAdicionalPromocao: true,
+      temAdicionalComando: true,
+    }),
     ).toMatchObject({
       trigrama: "ABC",
       nomeCompleto: "Joao da Silva",
@@ -26,6 +42,12 @@ describe("militar.mapper", () => {
       agencia: "0001",
       contaCorrente: "123-4",
       temDependente: true,
+      tipoHabilitacaoId: "8d0b9f3d-c4fb-4af0-94d9-dc54957ee1f2",
+      adicionalCompensacaoOrganicaPercentual: "10.00",
+      adicionalCompensacaoOrganicaPstGraduacaoBaseOrdem: 7,
+      temAdicionalTempoServico: true,
+      temAdicionalPromocao: true,
+      temAdicionalComando: true,
     });
   });
 
@@ -41,6 +63,10 @@ describe("militar.mapper", () => {
       nomeCompleto: "Joao da Silva",
       cpf: "12345678901",
       temDependente: false,
+      adicionalCompensacaoOrganicaPercentual: "0.00",
+      temAdicionalTempoServico: false,
+      temAdicionalPromocao: false,
+      temAdicionalComando: false,
     });
   });
 
@@ -58,6 +84,12 @@ describe("militar.mapper", () => {
         agencia: "0002",
         contaCorrente: "987-6",
         temDependente: false,
+        tipoHabilitacaoId: "8d0b9f3d-c4fb-4af0-94d9-dc54957ee1f2",
+        adicionalCompensacaoOrganicaPercentual: 12.5,
+        adicionalCompensacaoOrganicaPstGraduacaoBaseOrdem: 4,
+        temAdicionalTempoServico: true,
+        temAdicionalPromocao: true,
+        temAdicionalComando: true,
       }),
     ).toStrictEqual({
       trigrama: "XYZ",
@@ -70,6 +102,12 @@ describe("militar.mapper", () => {
       agencia: "0002",
       contaCorrente: "987-6",
       temDependente: false,
+      tipoHabilitacaoId: "8d0b9f3d-c4fb-4af0-94d9-dc54957ee1f2",
+      adicionalCompensacaoOrganicaPercentual: "12.50",
+      adicionalCompensacaoOrganicaPstGraduacaoBaseOrdem: 4,
+      temAdicionalTempoServico: true,
+      temAdicionalPromocao: true,
+      temAdicionalComando: true,
     });
   });
 
@@ -86,6 +124,7 @@ describe("militar.mapper", () => {
       agencia: null,
       contaCorrente: null,
       temDependente: false,
+      ...militarBase,
       createdAt: new Date("2026-01-01T00:00:00.000Z"),
       updatedAt: new Date("2026-01-01T00:00:00.000Z"),
     });
@@ -107,10 +146,19 @@ describe("militar.mapper", () => {
       agencia: null,
       contaCorrente: null,
       temDependente: false,
+      tipoHabilitacaoId: null,
+      adicionalCompensacaoOrganicaPercentual: new Prisma.Decimal("0.00"),
+      adicionalCompensacaoOrganicaPstGraduacaoBaseOrdem: null,
+      temAdicionalTempoServico: false,
+      temAdicionalPromocao: false,
+      temAdicionalComando: false,
       createdAt: new Date("2026-01-01T00:00:00.000Z"),
       updatedAt: new Date("2026-01-01T00:00:00.000Z"),
     };
 
-    expect(toDomain(militar)).toBe(militar);
+    expect(toDomain(militar)).toMatchObject({
+      adicionalCompensacaoOrganicaPercentual: 0,
+      trigrama: "ABC",
+    });
   });
 });

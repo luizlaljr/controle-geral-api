@@ -1,5 +1,6 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { buildApp } from "../../src/app";
+import { prisma } from "../../src/infra/database/prisma";
 import { cleanDatabase, ensureTestDatabaseUrl, migrateTestDatabase } from "../helpers/database";
 
 describe("Militares e2e", () => {
@@ -119,6 +120,60 @@ describe("Militares e2e", () => {
     expect(duplicateResponse.statusCode).toBe(409);
     expect(duplicateResponse.json()).toMatchObject({
       erro: { codigo: "TRIGRAMA_DUPLICADO" },
+    });
+  });
+
+  it("calcula remuneracao do militar por id e data", async () => {
+    const app = await appPromise;
+    const tipoHabilitacao = await prisma.tipoHabilitacao.findUniqueOrThrow({
+      where: { codigo: "FORMACAO" },
+    });
+
+    const createResponse = await app.inject({
+      method: "POST",
+      url: "/militares",
+      payload: {
+        trigrama: "rem",
+        nomeCompleto: "Militar Remunerado",
+        cpf: "12345678905",
+        tipoHabilitacaoId: tipoHabilitacao.id,
+        adicionalCompensacaoOrganicaPercentual: 10,
+        adicionalCompensacaoOrganicaPstGraduacaoBaseOrdem: 11,
+        temAdicionalTempoServico: true,
+        temAdicionalPromocao: true,
+        temAdicionalComando: true,
+      },
+    });
+    const militar = createResponse.json();
+
+    await prisma.promocao.create({
+      data: {
+        militarId: militar.id,
+        pstGraduacaoOrdem: 7,
+        dataPromocao: new Date("2026-01-01T03:00:00.000Z"),
+      },
+    });
+
+    const response = await app.inject({
+      method: "GET",
+      url: `/militares/${militar.id}/remuneracao?data=2026-02-01`,
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      militar: { id: militar.id, trigrama: "REM" },
+      pstGraduacao: { ordem: 7 },
+      soldo: { valor: 9976 },
+      adicionais: {
+        militar: { percentual: 19, valor: 1895.44 },
+        disponibilidadeMilitar: { percentual: 12, valor: 1197.12 },
+        habilitacao: { percentual: 12, valor: 1197.12 },
+        tempoServico: { percentual: 5, valor: 498.8 },
+        promocao: { percentual: 5, valor: 498.8 },
+        comando: { percentual: 10, valor: 997.6 },
+        compensacaoOrganica: { percentual: 10, valor: 673.7, baseSoldo: 6737 },
+      },
+      totalBruto: 16934.58,
     });
   });
 
